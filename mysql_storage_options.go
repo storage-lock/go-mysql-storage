@@ -21,12 +21,12 @@ func NewMySQLStorageOptions() *MySQLStorageOptions {
 	}
 }
 
-func (x *MySQLStorageOptions) WithConnectionProvider(connManager storage.ConnectionManager[*sql.DB]) *MySQLStorageOptions {
+func (x *MySQLStorageOptions) SetConnectionProvider(connManager storage.ConnectionManager[*sql.DB]) *MySQLStorageOptions {
 	x.ConnectionManager = connManager
 	return x
 }
 
-func (x *MySQLStorageOptions) WithTableName(tableName string) *MySQLStorageOptions {
+func (x *MySQLStorageOptions) SetTableName(tableName string) *MySQLStorageOptions {
 	x.TableName = tableName
 	return x
 }
