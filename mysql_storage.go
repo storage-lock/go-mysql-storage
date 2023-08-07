@@ -105,7 +105,7 @@ func (x *MySQLStorage) UpdateWithVersion(ctx context.Context, lockId string, exc
 	return nil
 }
 
-func (x *MySQLStorage) InsertWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) (returnError error) {
+func (x *MySQLStorage) CreateWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) (returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
