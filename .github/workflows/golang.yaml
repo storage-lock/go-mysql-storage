@@ -7,6 +7,8 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      # action文档：
+      # https://github.com/marketplace/actions/setup-mysql
       - uses: mirromutth/mysql-action@v1.1
         with:
           host port: 3306 # Optional, default value is 3306. The port of host
