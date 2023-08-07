@@ -1,7 +1,7 @@
 # MySQL Storage 
 
 # 一、这是什么
-以MySQL为存储引擎的[Storage](https://github.com/storage-lock/go-storage)实现，当前仓库为比较底层的存储层实现，对应的用户层锁接口详见[mysql-locks](https://github.com/storage-lock/go-mysql-locks)。
+以MySQL为存储引擎的[Storage](https://github.com/storage-lock/go-storage)实现，当前仓库为比较底层的存储层实现，你可以与[storage-lock](https://github.com/storage-lock/go-storage-lock)结合使用，或者这个项目[mysql-locks](https://github.com/storage-lock/go-mysql-locks)里专门封装提供了一些MySQL锁相关的更易用友好的API。
 
 # 二、安装依赖
 ```bash
