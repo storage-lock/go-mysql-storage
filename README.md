@@ -1,4 +1,4 @@
-# Mysql Storage 
+# MySQL Storage 
 
 以MySQL为存储引擎。
 
