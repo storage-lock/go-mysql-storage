@@ -38,22 +38,28 @@ func (x *MySQLStorage) GetName() string {
 	return StorageName
 }
 
-func (x *MySQLStorage) Init(ctx context.Context) (err error) {
+func (x *MySQLStorage) Init(ctx context.Context) (returnError error) {
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		thisError := x.options.ConnectionManager.Return(ctx, db)
-		if err == nil {
-			err = thisError
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
 		}
 	}()
 
+	// TODO 要不要自动创建数据库呢？这是一个值得讨论的问题。
+	// 用户有可能是想把数据库连接放到当前的数据库下，也可能是想放到别的数据库下
+	// 如果想放到别的数据库下，用户应该为其创建专门的数据库
+	// 如果是复用连接的话，则有可能会有需求是切换数据库，也许这里只应该标记一下，作为能够用之后的优化项
+
 	// 创建存储锁信息需要的表
+	// TODO 这个参数后面涉及到多处拼接sql，可能会有sql注入，是否需要做一些安全措施？
 	tableFullName := x.options.TableName
 	if tableFullName == "" {
-		tableFullName = storage.DefaultStorageTableName
+		tableFullName = fmt.Sprintf("`%s`.`%s`", storage.DefaultStorageDatabaseName, storage.DefaultStorageTableName)
 	}
 	createTableSql := `CREATE TABLE IF NOT EXISTS %s (
     lock_id VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -71,14 +77,17 @@ func (x *MySQLStorage) Init(ctx context.Context) (err error) {
 	return nil
 }
 
-func (x *MySQLStorage) UpdateWithVersion(ctx context.Context, lockId string, exceptedVersion, newVersion storage.Version, lockInformation *storage.LockInformation) error {
+func (x *MySQLStorage) UpdateWithVersion(ctx context.Context, lockId string, exceptedVersion, newVersion storage.Version, lockInformation *storage.LockInformation) (returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		_ = x.options.ConnectionManager.Return(ctx, db)
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 
 	insertSql := fmt.Sprintf(`UPDATE %s SET version = ?, lock_information_json_string = ? WHERE lock_id = ? AND owner_id = ? AND version = ?`, x.tableFullName)
@@ -96,14 +105,17 @@ func (x *MySQLStorage) UpdateWithVersion(ctx context.Context, lockId string, exc
 	return nil
 }
 
-func (x *MySQLStorage) InsertWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) error {
+func (x *MySQLStorage) InsertWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) (returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		_ = x.options.ConnectionManager.Return(ctx, db)
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 
 	insertSql := fmt.Sprintf(`INSERT INTO %s (lock_id, owner_id, version, lock_information_json_string) VALUES (?, ?, ?, ?)`, x.tableFullName)
@@ -121,14 +133,17 @@ func (x *MySQLStorage) InsertWithVersion(ctx context.Context, lockId string, ver
 	return nil
 }
 
-func (x *MySQLStorage) DeleteWithVersion(ctx context.Context, lockId string, exceptedVersion storage.Version, lockInformation *storage.LockInformation) error {
+func (x *MySQLStorage) DeleteWithVersion(ctx context.Context, lockId string, exceptedVersion storage.Version, lockInformation *storage.LockInformation) (returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		_ = x.options.ConnectionManager.Return(ctx, db)
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 
 	deleteSql := fmt.Sprintf(`DELETE FROM %s WHERE lock_id = ? AND owner_id = ? AND version = ?`, x.tableFullName)
@@ -146,14 +161,17 @@ func (x *MySQLStorage) DeleteWithVersion(ctx context.Context, lockId string, exc
 	return nil
 }
 
-func (x *MySQLStorage) Get(ctx context.Context, lockId string) (string, error) {
+func (x *MySQLStorage) Get(ctx context.Context, lockId string) (lockInformationJsonString string, returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return "", err
 	}
 	defer func() {
-		_ = x.options.ConnectionManager.Return(ctx, db)
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 
 	getLockSql := fmt.Sprintf("SELECT lock_information_json_string FROM %s WHERE lock_id = ?", x.tableFullName)
@@ -167,7 +185,6 @@ func (x *MySQLStorage) Get(ctx context.Context, lockId string) (string, error) {
 	if !rs.Next() {
 		return "", storage_lock.ErrLockNotFound
 	}
-	var lockInformationJsonString string
 	err = rs.Scan(&lockInformationJsonString)
 	if err != nil {
 		return "", err
@@ -175,23 +192,30 @@ func (x *MySQLStorage) Get(ctx context.Context, lockId string) (string, error) {
 	return lockInformationJsonString, nil
 }
 
-func (x *MySQLStorage) GetTime(ctx context.Context) (time.Time, error) {
+func (x *MySQLStorage) GetTime(ctx context.Context) (now time.Time, returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
 	defer func() {
-		_ = x.options.ConnectionManager.Return(ctx, db)
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 
 	var zero time.Time
+	// TODO 多实例的情况下可能会有问题，允许其能够比较方便的切换到NTP TimeProvider
 	rs, err := db.Query("SELECT UNIX_TIMESTAMP(NOW())")
 	if err != nil {
 		return zero, err
 	}
 	defer func() {
-		_ = rs.Close()
+		err := rs.Close()
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 	if !rs.Next() {
 		return zero, errors.New("rs server time failed")
@@ -202,21 +226,26 @@ func (x *MySQLStorage) GetTime(ctx context.Context) (time.Time, error) {
 		return zero, err
 	}
 
+	// TODO 时区
 	return time.Unix(int64(databaseTimestamp), 0), nil
 }
 
 func (x *MySQLStorage) Close(ctx context.Context) error {
+	// 没有Storage级别的资源好回收的
 	return nil
 }
 
-func (x *MySQLStorage) List(ctx context.Context) (iterator.Iterator[*storage.LockInformation], error) {
+func (x *MySQLStorage) List(ctx context.Context) (iterator iterator.Iterator[*storage.LockInformation], returnError error) {
 
 	db, err := x.options.ConnectionManager.Take(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		_ = x.options.ConnectionManager.Return(ctx, db)
+		err := x.options.ConnectionManager.Return(ctx, db)
+		if returnError == nil {
+			returnError = err
+		}
 	}()
 
 	rows, err := db.Query("SELECT * FROM %s", x.tableFullName)

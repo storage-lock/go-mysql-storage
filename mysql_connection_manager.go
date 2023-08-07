@@ -25,6 +25,8 @@ type MySQLConnectionManager struct {
 
 	DatabaseName string
 
+	DSN string
+
 	// 初始化好的数据库实例
 	db   *sql.DB
 	err  error
@@ -34,12 +36,14 @@ type MySQLConnectionManager struct {
 var _ storage.ConnectionManager[*sql.DB] = &MySQLConnectionManager{}
 
 // NewMySQLConnectionManagerFromDSN 从DSN创建MySQL连接管理器
-func NewMySQLConnectionManagerFromDSN(dsn string) storage.ConnectionManager[*sql.DB] {
-	return storage.NewDsnConnectionManager("mysql", dsn)
+func NewMySQLConnectionManagerFromDSN(dsn string) *MySQLConnectionManager {
+	return &MySQLConnectionManager{
+		DSN: dsn,
+	}
 }
 
-// NewMySQLConnectionProvider 从连接属性创建数据库连接
-func NewMySQLConnectionProvider(host string, port uint, user, passwd, database string) *MySQLConnectionManager {
+// NewMySQLConnectionManager 从连接属性创建数据库连接
+func NewMySQLConnectionManager(host string, port uint, user, passwd, database string) *MySQLConnectionManager {
 	return &MySQLConnectionManager{
 		Host:         host,
 		Port:         port,
@@ -74,8 +78,10 @@ func (x *MySQLConnectionManager) SetDatabaseName(databaseName string) *MySQLConn
 	return x
 }
 
+const MySQLConnectionManagerName = "mysql-connection-manager"
+
 func (x *MySQLConnectionManager) Name() string {
-	return "mysql-connection-manager"
+	return MySQLConnectionManagerName
 }
 
 // Take 获取到数据库的连接
@@ -92,6 +98,9 @@ func (x *MySQLConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
 }
 
 func (x *MySQLConnectionManager) GetDSN() string {
+	if x.DSN != "" {
+		return x.DSN
+	}
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", x.User, x.Passwd, x.Host, x.Port, x.DatabaseName)
 }
 

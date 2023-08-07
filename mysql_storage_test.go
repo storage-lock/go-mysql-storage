@@ -2,6 +2,7 @@ package mysql_storage
 
 import (
 	"context"
+	"github.com/storage-lock/go-storage"
 	storage_test_helper "github.com/storage-lock/go-storage-test-helper"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -15,7 +16,7 @@ func TestNewMySQLStorage(t *testing.T) {
 	connectionGetter := NewMySQLConnectionManagerFromDSN(dsn)
 	s, err := NewMySQLStorage(context.Background(), &MySQLStorageOptions{
 		ConnectionManager: connectionGetter,
-		TableName:         "storage_lock_test",
+		TableName:         storage.DefaultStorageTableName,
 	})
 	assert.Nil(t, err)
 	storage_test_helper.TestStorage(t, s)
