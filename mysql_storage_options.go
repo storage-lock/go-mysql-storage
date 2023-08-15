@@ -2,6 +2,7 @@ package mysql_storage
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/storage-lock/go-storage"
 )
 
@@ -29,4 +30,17 @@ func (x *MySQLStorageOptions) SetConnectionManager(connManager storage.Connectio
 func (x *MySQLStorageOptions) SetTableName(tableName string) *MySQLStorageOptions {
 	x.TableName = tableName
 	return x
+}
+
+func (x *MySQLStorageOptions) Check() error {
+
+	if x.TableName == "" {
+		x.TableName = storage.DefaultStorageDatabaseName
+	}
+
+	if x.ConnectionManager == nil {
+		return fmt.Errorf("MySQLStorageOptions.ConnectionManager can not nil")
+	}
+
+	return nil
 }
