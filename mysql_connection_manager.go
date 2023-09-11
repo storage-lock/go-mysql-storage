@@ -8,8 +8,8 @@ import (
 	"sync"
 )
 
-// MySQLConnectionManager 创建一个MySQL的连接管理器
-type MySQLConnectionManager struct {
+// MysqlConnectionManager 创建一个MySQL的连接管理器
+type MysqlConnectionManager struct {
 
 	// 主机的名字
 	Host string
@@ -33,18 +33,18 @@ type MySQLConnectionManager struct {
 	once sync.Once
 }
 
-var _ storage.ConnectionManager[*sql.DB] = &MySQLConnectionManager{}
+var _ storage.ConnectionManager[*sql.DB] = &MysqlConnectionManager{}
 
-// NewMySQLConnectionManagerFromDSN 从DSN创建MySQL连接管理器
-func NewMySQLConnectionManagerFromDSN(dsn string) *MySQLConnectionManager {
-	return &MySQLConnectionManager{
+// NewMysqlConnectionManagerFromDSN 从DSN创建MySQL连接管理器
+func NewMysqlConnectionManagerFromDSN(dsn string) *MysqlConnectionManager {
+	return &MysqlConnectionManager{
 		DSN: dsn,
 	}
 }
 
-// NewMySQLConnectionManager 从连接属性创建数据库连接
-func NewMySQLConnectionManager(host string, port uint, user, passwd, database string) *MySQLConnectionManager {
-	return &MySQLConnectionManager{
+// NewMysqlConnectionManager 从连接属性创建数据库连接
+func NewMysqlConnectionManager(host string, port uint, user, passwd, database string) *MysqlConnectionManager {
+	return &MysqlConnectionManager{
 		Host:         host,
 		Port:         port,
 		User:         user,
@@ -53,39 +53,39 @@ func NewMySQLConnectionManager(host string, port uint, user, passwd, database st
 	}
 }
 
-func (x *MySQLConnectionManager) SetHost(host string) *MySQLConnectionManager {
+func (x *MysqlConnectionManager) SetHost(host string) *MysqlConnectionManager {
 	x.Host = host
 	return x
 }
 
-func (x *MySQLConnectionManager) SetPort(port uint) *MySQLConnectionManager {
+func (x *MysqlConnectionManager) SetPort(port uint) *MysqlConnectionManager {
 	x.Port = port
 	return x
 }
 
-func (x *MySQLConnectionManager) SetUser(user string) *MySQLConnectionManager {
+func (x *MysqlConnectionManager) SetUser(user string) *MysqlConnectionManager {
 	x.User = user
 	return x
 }
 
-func (x *MySQLConnectionManager) SetPasswd(passwd string) *MySQLConnectionManager {
+func (x *MysqlConnectionManager) SetPasswd(passwd string) *MysqlConnectionManager {
 	x.Passwd = passwd
 	return x
 }
 
-func (x *MySQLConnectionManager) SetDatabaseName(databaseName string) *MySQLConnectionManager {
+func (x *MysqlConnectionManager) SetDatabaseName(databaseName string) *MysqlConnectionManager {
 	x.DatabaseName = databaseName
 	return x
 }
 
-const MySQLConnectionManagerName = "mysql-connection-manager"
+const MysqlConnectionManagerName = "mysql-connection-manager"
 
-func (x *MySQLConnectionManager) Name() string {
-	return MySQLConnectionManagerName
+func (x *MysqlConnectionManager) Name() string {
+	return MysqlConnectionManagerName
 }
 
 // Take 获取到数据库的连接
-func (x *MySQLConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
+func (x *MysqlConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
 	x.once.Do(func() {
 		db, err := sql.Open("mysql", x.GetDSN())
 		if err != nil {
@@ -97,18 +97,18 @@ func (x *MySQLConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
 	return x.db, x.err
 }
 
-func (x *MySQLConnectionManager) GetDSN() string {
+func (x *MysqlConnectionManager) GetDSN() string {
 	if x.DSN != "" {
 		return x.DSN
 	}
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", x.User, x.Passwd, x.Host, x.Port, x.DatabaseName)
 }
 
-func (x *MySQLConnectionManager) Return(ctx context.Context, db *sql.DB) error {
+func (x *MysqlConnectionManager) Return(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func (x *MySQLConnectionManager) Shutdown(ctx context.Context) error {
+func (x *MysqlConnectionManager) Shutdown(ctx context.Context) error {
 	if x.db != nil {
 		return x.db.Close()
 	}
