@@ -2,12 +2,11 @@ package mysql_storage
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/storage-lock/go-storage"
 )
 
-// MySQLStorageOptions 基于MySQL为存储引擎时的选项
-type MySQLStorageOptions struct {
+// MysqlStorageOptions 基于MySQL为存储引擎时的选项
+type MysqlStorageOptions struct {
 
 	// 存放锁的表的名字，如果未指定的话则使用默认的表
 	TableName string
@@ -16,30 +15,30 @@ type MySQLStorageOptions struct {
 	ConnectionManager storage.ConnectionManager[*sql.DB]
 }
 
-func NewMySQLStorageOptions() *MySQLStorageOptions {
-	return &MySQLStorageOptions{
+func NewMySQLStorageOptions() *MysqlStorageOptions {
+	return &MysqlStorageOptions{
 		TableName: storage.DefaultStorageTableName,
 	}
 }
 
-func (x *MySQLStorageOptions) SetConnectionManager(connManager storage.ConnectionManager[*sql.DB]) *MySQLStorageOptions {
+func (x *MysqlStorageOptions) SetConnectionManager(connManager storage.ConnectionManager[*sql.DB]) *MysqlStorageOptions {
 	x.ConnectionManager = connManager
 	return x
 }
 
-func (x *MySQLStorageOptions) SetTableName(tableName string) *MySQLStorageOptions {
+func (x *MysqlStorageOptions) SetTableName(tableName string) *MysqlStorageOptions {
 	x.TableName = tableName
 	return x
 }
 
-func (x *MySQLStorageOptions) Check() error {
+func (x *MysqlStorageOptions) Check() error {
 
 	if x.TableName == "" {
 		x.TableName = storage.DefaultStorageDatabaseName
 	}
 
 	if x.ConnectionManager == nil {
-		return fmt.Errorf("MySQLStorageOptions.ConnectionManager can not nil")
+		return ErrMysqlStorageOptionsConnectionManagerNil
 	}
 
 	return nil

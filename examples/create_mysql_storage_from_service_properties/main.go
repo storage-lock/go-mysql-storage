@@ -14,11 +14,11 @@ func main() {
 	username := "root"
 	passwd := "UeGqAm8CxYGldMDLoNNt"
 	database := "storage_lock_test"
-	connectionManager := mysql_storage.NewMySQLConnectionManager(host, port, username, passwd, database)
+	connectionManager := mysql_storage.NewMysqlConnectionManager(host, port, username, passwd, database)
 
 	// 然后从这个连接管理器创建MySQL Storage
 	options := mysql_storage.NewMySQLStorageOptions().SetConnectionManager(connectionManager)
-	storage, err := mysql_storage.NewMySQLStorage(context.Background(), options)
+	storage, err := mysql_storage.NewMysqlStorage(context.Background(), options)
 	if err != nil {
 		panic(err)
 	}

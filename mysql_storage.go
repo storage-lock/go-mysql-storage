@@ -7,14 +7,17 @@ import (
 	"github.com/storage-lock/go-storage"
 )
 
-type MySQLStorage struct {
+// MysqlStorage 基于Mysql的存储
+type MysqlStorage struct {
+	// mysql的操作基本都是支持sql92语法的
 	*sql_based_storage.SqlBasedStorage
-	options *MySQLStorageOptions
+
+	options *MysqlStorageOptions
 }
 
-var _ storage.Storage = &MySQLStorage{}
+var _ storage.Storage = &MysqlStorage{}
 
-func NewMySQLStorage(ctx context.Context, options *MySQLStorageOptions) (*MySQLStorage, error) {
+func NewMysqlStorage(ctx context.Context, options *MysqlStorageOptions) (*MysqlStorage, error) {
 
 	// 参数检查
 	if err := options.Check(); err != nil {
@@ -24,14 +27,14 @@ func NewMySQLStorage(ctx context.Context, options *MySQLStorageOptions) (*MySQLS
 	// sql storage的基础Storage
 	baseStorageOption := sql_based_storage.NewSqlBasedStorageOptions().
 		SetConnectionManager(options.ConnectionManager).
-		SetSqlProvider(sql_based_storage.NewSql97Provider()).
+		SetSqlProvider(sql_based_storage.NewSql92Provider()).
 		SetTableFullName(options.TableName)
 	baseStorage, err := sql_based_storage.NewSqlBasedStorage(baseStorageOption)
 	if err != nil {
 		return nil, err
 	}
 
-	s := &MySQLStorage{
+	s := &MysqlStorage{
 		SqlBasedStorage: baseStorage,
 		options:         options,
 	}
@@ -46,6 +49,6 @@ func NewMySQLStorage(ctx context.Context, options *MySQLStorageOptions) (*MySQLS
 
 const StorageName = "mysql-storage"
 
-func (x *MySQLStorage) GetName() string {
+func (x *MysqlStorage) GetName() string {
 	return StorageName
 }

@@ -13,8 +13,8 @@ func TestNewMySQLStorage(t *testing.T) {
 	envName := "STORAGE_LOCK_MYSQL_DSN"
 	dsn := os.Getenv(envName)
 	assert.NotEmpty(t, dsn)
-	connectionGetter := NewMySQLConnectionManagerFromDSN(dsn)
-	s, err := NewMySQLStorage(context.Background(), &MySQLStorageOptions{
+	connectionGetter := NewMysqlConnectionManagerFromDSN(dsn)
+	s, err := NewMysqlStorage(context.Background(), &MysqlStorageOptions{
 		ConnectionManager: connectionGetter,
 		TableName:         storage.DefaultStorageTableName,
 	})

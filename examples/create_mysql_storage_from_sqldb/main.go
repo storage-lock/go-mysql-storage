@@ -20,7 +20,7 @@ func main() {
 	// 则可以从这个*sql.DB中创建一个MySQL Storage
 	connectionManager := storage.NewFixedSqlDBConnectionManager(db)
 	options := mysql_storage.NewMySQLStorageOptions().SetConnectionManager(connectionManager)
-	storage, err := mysql_storage.NewMySQLStorage(context.Background(), options)
+	storage, err := mysql_storage.NewMysqlStorage(context.Background(), options)
 	if err != nil {
 		panic(err)
 	}
