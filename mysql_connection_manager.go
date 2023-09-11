@@ -35,10 +35,16 @@ type MysqlConnectionManager struct {
 
 var _ storage.ConnectionManager[*sql.DB] = &MysqlConnectionManager{}
 
-// NewMysqlConnectionManagerFromDSN 从DSN创建MySQL连接管理器
-func NewMysqlConnectionManagerFromDSN(dsn string) *MysqlConnectionManager {
+// NewMysqlConnectionManagerFromDsn 从DSN创建MySQL连接管理器
+func NewMysqlConnectionManagerFromDsn(dsn string) *MysqlConnectionManager {
 	return &MysqlConnectionManager{
 		DSN: dsn,
+	}
+}
+
+func NewMysqlConnectionManagerFromSqlDb(db *sql.DB) *MysqlConnectionManager {
+	return &MysqlConnectionManager{
+		db: db,
 	}
 }
 
@@ -87,6 +93,9 @@ func (x *MysqlConnectionManager) Name() string {
 // Take 获取到数据库的连接
 func (x *MysqlConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
 	x.once.Do(func() {
+		if x.db != nil || x.err != nil {
+			return
+		}
 		db, err := sql.Open("mysql", x.GetDSN())
 		if err != nil {
 			x.err = err
