@@ -59,8 +59,10 @@ func (x *MysqlStorage) CreateWithVersion(ctx context.Context, lockId string, ver
 	err := x.SqlBasedStorage.CreateWithVersion(ctx, lockId, version, lockInformation)
 	if err != nil {
 		msg := err.Error()
+		// 不同的版本报错信息可能略有差异，这里就只使用错误码来区分
 		// panic: Error 1062 (23000): Duplicate entry '2b690ef6ed8e442d99aaa58147829c89' for key 'PRIMARY'
-		if strings.Contains(msg, "Error 1062") && strings.Contains(msg, "Duplicate entry") && strings.Contains(msg, "for key 'PRIMARY'") {
+		// panic: Error 1062 (23000): Duplicate entry 'db0904fe9c3e4b7ab72476cd8a16bd86' for key 'storage_lock.PRIMARY'
+		if strings.Contains(msg, "Error 1062 (23000)") {
 			return storage_lock.ErrVersionMiss
 		}
 	}
