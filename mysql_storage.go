@@ -5,6 +5,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	sql_based_storage "github.com/storage-lock/go-sql-based-storage"
 	"github.com/storage-lock/go-storage"
+	storage_lock "github.com/storage-lock/go-storage-lock"
+	"strings"
 )
 
 // MysqlStorage 基于Mysql的存储
@@ -51,4 +53,16 @@ const StorageName = "mysql-storage"
 
 func (x *MysqlStorage) GetName() string {
 	return StorageName
+}
+
+func (x *MysqlStorage) CreateWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) (returnError error) {
+	err := x.SqlBasedStorage.CreateWithVersion(ctx, lockId, version, lockInformation)
+	if err != nil {
+		msg := err.Error()
+		// panic: Error 1062 (23000): Duplicate entry '2b690ef6ed8e442d99aaa58147829c89' for key 'PRIMARY'
+		if strings.Contains(msg, "Error 1062") && strings.Contains(msg, "Duplicate entry") && strings.Contains(msg, "for key 'PRIMARY'") {
+			return storage_lock.ErrVersionMiss
+		}
+	}
+	return err
 }
