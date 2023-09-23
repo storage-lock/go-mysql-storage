@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestNewMySQLStorage(t *testing.T) {
+func TestNewMysqlStorage(t *testing.T) {
 	envName := "STORAGE_LOCK_MYSQL_DSN"
 	dsn := os.Getenv(envName)
 	assert.NotEmpty(t, dsn)

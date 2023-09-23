@@ -17,7 +17,7 @@ func main() {
 	connectionManager := mysql_storage.NewMysqlConnectionManager(host, port, username, passwd, database)
 
 	// 然后从这个连接管理器创建MySQL Storage
-	options := mysql_storage.NewMySQLStorageOptions().SetConnectionManager(connectionManager)
+	options := mysql_storage.NewMysqlStorageOptions().SetConnectionManager(connectionManager)
 	storage, err := mysql_storage.NewMysqlStorage(context.Background(), options)
 	if err != nil {
 		panic(err)
