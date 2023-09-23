@@ -15,7 +15,7 @@ type MysqlStorageOptions struct {
 	ConnectionManager storage.ConnectionManager[*sql.DB]
 }
 
-func NewMySQLStorageOptions() *MysqlStorageOptions {
+func NewMysqlStorageOptions() *MysqlStorageOptions {
 	return &MysqlStorageOptions{
 		TableName: storage.DefaultStorageTableName,
 	}
