@@ -55,6 +55,16 @@ func (x *MysqlStorage) GetName() string {
 	return StorageName
 }
 
+// Capabilities 声明 MySQL 存储支持的能力
+// MySQL 通过主键唯一约束和 WHERE 条件更新天然支持 CAS，
+// 通过 UNIX_TIMESTAMP(NOW()) 提供数据库服务器时间
+func (x *MysqlStorage) Capabilities() []storage.StorageCapability {
+	return []storage.StorageCapability{
+		storage.CapabilityCAS,
+		storage.CapabilityReliableTime,
+	}
+}
+
 func (x *MysqlStorage) CreateWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) (returnError error) {
 	err := x.SqlBasedStorage.CreateWithVersion(ctx, lockId, version, lockInformation)
 	if err != nil {
