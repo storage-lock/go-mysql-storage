@@ -28,9 +28,12 @@ type MysqlConnectionManager struct {
 	DSN string
 
 	// 初始化好的数据库实例
-	db   *sql.DB
-	err  error
-	once sync.Once
+	// initMu 保护初始化状态。原用 sync.Once，sql.Open 首次失败后 err 永久缓存无法重试
+	// （漏洞4/liveness，不破互斥性——拿不到 db 则 CAS 无法发起）。改为 mutex + initialized：
+	// 成功后缓存 db 不重复 Open；失败不缓存 err 可重试。
+	db          *sql.DB
+	initMu      sync.Mutex
+	initialized bool
 }
 
 var _ storage.ConnectionManager[*sql.DB] = &MysqlConnectionManager{}
@@ -91,19 +94,23 @@ func (x *MysqlConnectionManager) Name() string {
 }
 
 // Take 获取到数据库的连接
+//
+// 漏洞4 修复：原 sync.Once 在 sql.Open 失败时永久缓存 err 无法重试（liveness，不破互斥性）。
+// 改为 mutex + initialized：成功后缓存 db 不重复 Open；失败不缓存 err 可重试。
 func (x *MysqlConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
-	x.once.Do(func() {
-		if x.db != nil || x.err != nil {
-			return
-		}
-		db, err := sql.Open("mysql", x.GetDSN())
-		if err != nil {
-			x.err = err
-			return
-		}
-		x.db = db
-	})
-	return x.db, x.err
+	x.initMu.Lock()
+	defer x.initMu.Unlock()
+	if x.initialized {
+		return x.db, nil
+	}
+	db, err := sql.Open("mysql", x.GetDSN())
+	if err != nil {
+		// 失败不缓存，下次 Take 可重试
+		return nil, err
+	}
+	x.db = db
+	x.initialized = true
+	return x.db, nil
 }
 
 func (x *MysqlConnectionManager) GetDSN() string {
@@ -118,8 +125,11 @@ func (x *MysqlConnectionManager) Return(ctx context.Context, db *sql.DB) error {
 }
 
 func (x *MysqlConnectionManager) Shutdown(ctx context.Context) error {
-	if x.db != nil {
-		return x.db.Close()
+	x.initMu.Lock()
+	db := x.db
+	x.initMu.Unlock()
+	if db != nil {
+		return db.Close()
 	}
 	return nil
 }
