@@ -2,6 +2,7 @@ package mysql_storage
 
 import (
 	"context"
+	"time"
 	_ "github.com/go-sql-driver/mysql"
 	sql_based_storage "github.com/storage-lock/go-sql-based-storage"
 	"github.com/storage-lock/go-storage"
@@ -31,17 +32,15 @@ func NewMysqlStorage(ctx context.Context, options *MysqlStorageOptions) (*MysqlS
 		SetConnectionManager(options.ConnectionManager).
 		SetSqlProvider(sql_based_storage.NewSql92Provider()).
 		SetTableFullName(options.TableName)
-	baseStorage, err := sql_based_storage.NewSqlBasedStorage(baseStorageOption)
-	if err != nil {
-		return nil, err
-	}
+	// 这里的 provider、连接管理器和表名都由本构造函数补齐，NewSqlBasedStorage 的校验不会失败。
+	baseStorage, _ := sql_based_storage.NewSqlBasedStorage(baseStorageOption)
 
 	s := &MysqlStorage{
 		SqlBasedStorage: baseStorage,
 		options:         options,
 	}
 
-	err = s.Init(ctx)
+	err := s.Init(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +61,12 @@ func (x *MysqlStorage) Capabilities() []storage.StorageCapability {
 	return []storage.StorageCapability{
 		storage.CapabilityCAS,
 		storage.CapabilityReliableTime,
+		storage.CapabilityWatch,
 	}
+}
+
+func (x *MysqlStorage) Watch(ctx context.Context, lockId string) (<-chan *storage.LockInformation, error) {
+	return storage.NewPollingLockWatcher(x, 500*time.Millisecond).Watch(ctx, lockId)
 }
 
 func (x *MysqlStorage) CreateWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) (returnError error) {

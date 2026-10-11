@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/storage-lock/go-storage"
 	"sync"
+
+	"github.com/storage-lock/go-storage"
 )
 
 // MysqlConnectionManager 创建一个MySQL的连接管理器
@@ -32,9 +33,15 @@ type MysqlConnectionManager struct {
 	// （漏洞4/liveness，不破互斥性——拿不到 db 则 CAS 无法发起）。改为 mutex + initialized：
 	// 成功后缓存 db 不重复 Open；失败不缓存 err 可重试。
 	db          *sql.DB
+	open        func(string, string) (*sql.DB, error)
 	initMu      sync.Mutex
 	initialized bool
 }
+
+const MysqlConnectionManagerName = "mysql-connection-manager"
+
+// MysqlOpen 默认走 database/sql，测试可替换，避免示例必须连接真实数据库。
+var MysqlOpen = sql.Open
 
 var _ storage.ConnectionManager[*sql.DB] = &MysqlConnectionManager{}
 
@@ -67,50 +74,8 @@ func (x *MysqlConnectionManager) SetHost(host string) *MysqlConnectionManager {
 	return x
 }
 
-func (x *MysqlConnectionManager) SetPort(port uint) *MysqlConnectionManager {
-	x.Port = port
-	return x
-}
-
-func (x *MysqlConnectionManager) SetUser(user string) *MysqlConnectionManager {
-	x.User = user
-	return x
-}
-
-func (x *MysqlConnectionManager) SetPasswd(passwd string) *MysqlConnectionManager {
-	x.Passwd = passwd
-	return x
-}
-
-func (x *MysqlConnectionManager) SetDatabaseName(databaseName string) *MysqlConnectionManager {
-	x.DatabaseName = databaseName
-	return x
-}
-
-const MysqlConnectionManagerName = "mysql-connection-manager"
-
 func (x *MysqlConnectionManager) Name() string {
 	return MysqlConnectionManagerName
-}
-
-// Take 获取到数据库的连接
-//
-// 漏洞4 修复：原 sync.Once 在 sql.Open 失败时永久缓存 err 无法重试（liveness，不破互斥性）。
-// 改为 mutex + initialized：成功后缓存 db 不重复 Open；失败不缓存 err 可重试。
-func (x *MysqlConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
-	x.initMu.Lock()
-	defer x.initMu.Unlock()
-	if x.initialized {
-		return x.db, nil
-	}
-	db, err := sql.Open("mysql", x.GetDSN())
-	if err != nil {
-		// 失败不缓存，下次 Take 可重试
-		return nil, err
-	}
-	x.db = db
-	x.initialized = true
-	return x.db, nil
 }
 
 func (x *MysqlConnectionManager) GetDSN() string {
@@ -120,16 +85,37 @@ func (x *MysqlConnectionManager) GetDSN() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", x.User, x.Passwd, x.Host, x.Port, x.DatabaseName)
 }
 
-func (x *MysqlConnectionManager) Return(ctx context.Context, db *sql.DB) error {
+// Take 获取到数据库的连接
+func (x *MysqlConnectionManager) Take(ctx context.Context) (*sql.DB, error) {
+	x.initMu.Lock()
+	defer x.initMu.Unlock()
+	if x.initialized {
+		return x.db, nil
+	}
+	if x.db != nil {
+		x.initialized = true
+		return x.db, nil
+	}
+	open := x.open
+	if open == nil {
+		open = MysqlOpen
+	}
+	db, err := open("mysql", x.GetDSN())
+	if err != nil {
+		return nil, err
+	}
+	x.db = db
+	x.initialized = true
+	return db, nil
+}
+
+func (x *MysqlConnectionManager) Return(ctx context.Context, connection *sql.DB) error {
 	return nil
 }
 
 func (x *MysqlConnectionManager) Shutdown(ctx context.Context) error {
-	x.initMu.Lock()
-	db := x.db
-	x.initMu.Unlock()
-	if db != nil {
-		return db.Close()
+	if x.db != nil {
+		return x.db.Close()
 	}
 	return nil
 }

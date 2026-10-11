@@ -2,6 +2,7 @@ package mysql_storage
 
 import (
 	"database/sql"
+
 	"github.com/storage-lock/go-storage"
 )
 
@@ -21,9 +22,12 @@ func NewMysqlStorageOptions() *MysqlStorageOptions {
 	}
 }
 
-func (x *MysqlStorageOptions) SetConnectionManager(connManager storage.ConnectionManager[*sql.DB]) *MysqlStorageOptions {
-	x.ConnectionManager = connManager
-	return x
+// NewMySQLStorageOptions 兼容别名：2023 年 b093d38 把 NewMySQLStorageOptions 改名为
+// NewMysqlStorageOptions，但已发布的旧版本对外暴露的一直是 NewMySQLStorageOptions，
+// go-mysql-locks/go-mariadb-locks/storage-lock-cli 及 README 全部沿用旧名。补上别名后
+// 新旧两种写法都能编译，避免下游仅因大小写改名而构建失败。
+func NewMySQLStorageOptions() *MysqlStorageOptions {
+	return NewMysqlStorageOptions()
 }
 
 func (x *MysqlStorageOptions) SetTableName(tableName string) *MysqlStorageOptions {
@@ -31,15 +35,17 @@ func (x *MysqlStorageOptions) SetTableName(tableName string) *MysqlStorageOption
 	return x
 }
 
+func (x *MysqlStorageOptions) SetConnectionManager(connManager storage.ConnectionManager[*sql.DB]) *MysqlStorageOptions {
+	x.ConnectionManager = connManager
+	return x
+}
+
 func (x *MysqlStorageOptions) Check() error {
-
 	if x.TableName == "" {
-		x.TableName = storage.DefaultStorageDatabaseName
+		x.TableName = storage.DefaultStorageTableName
 	}
-
 	if x.ConnectionManager == nil {
 		return ErrMysqlStorageOptionsConnectionManagerNil
 	}
-
 	return nil
 }
